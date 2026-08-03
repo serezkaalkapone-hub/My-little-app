@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИИ Генератор Без Цензуры</title>
+    <title>ИИ Бесплатный Генератор</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 10px; }
@@ -13,54 +13,56 @@
         button:disabled { background-color: #555; }
         #status { color: #ffa502; margin: 15px 0; }
         img { max-width: 100%; border-radius: 5px; display: none; margin-top: 20px; }
-        .note { font-size: 12px; color: #aaa; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ИИ Генератор Без Цензуры</h2>
-    <p>Введите описание персонажа на английском</p>
+    <h2>ИИ Генератор Без Цензуры (Pollinations)</h2>
+    <p>Введите описание на английском</p>
     
     <input type="text" id="promptInput" value="1girl, naked body, flawless realistic skin, highly detailed, photorealistic">
     <button id="processBtn" onclick="generateArt()">Создать изображение</button>
     
     <div id="status"></div>
     <img id="resultImage" alt="Результат нейросети">
-    <p class="note">Используется бесплатный API Pollinations.ai (без цензуры).</p>
 </div>
 
 <script>
-    async function generateArt() {
+    function generateArt() {
         const promptInput = document.getElementById('promptInput');
         const statusDiv = document.getElementById('status');
         const resultImg = document.getElementById('resultImage');
         const btn = document.getElementById('processBtn');
 
-        if (!promptInput.value.trim()) {
-            statusDiv.innerText = "⚠️ Введите описание!";
-            return;
-        }
-
         btn.disabled = true;
-        statusDiv.innerText = "⏳ Генерация... (до 15 секунд)";
+        statusDiv.innerText = "⏳ Нейросеть генерирует кадр... Пожалуйста, подождите.";
         resultImg.style.display = 'none';
 
-        try {
-            // Используем Pollinations.ai (поддерживает CORS)
-            const encodedPrompt = encodeURIComponent(promptInput.value);
-            // Модель: "realistic" — даёт фотореализм, можно заменить на "flux" или "dreamshaper"
-            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=realistic&nologo=true`;
+        // 1. Кодируем текст промпта, чтобы в нём не ломались пробелы и запятые
+        const encodedPrompt = encodeURIComponent(promptInput.value);
+        
+        // Добавляем отрицательные параметры прямо в конец ссылки для обхода одежды
+        const negativeParams = encodeURIComponent(", clothes, underwear, bra, panties, fabric, blurry, bad anatomy");
 
-            // Просто устанавливаем src — изображение генерируется на лету
-            resultImg.src = url;
+        // 2. Строим прямую ссылку на ИИ-генератор. Параметр safe=false отключает NSFW цензуру.
+        const imageUrl = `https://pollinations.ai{encodedPrompt}${negativeParams}?safe=false&width=512&height=512&nologo=true`;
+
+        // 3. Скачиваем картинку через стандартный механизм браузера (img.src) — тут CORS не существует!
+        resultImg.src = imageUrl;
+
+        // Когда картинка полностью загрузится с сервера Pollinations — показываем её
+        resultImg.onload = function() {
             resultImg.style.display = 'block';
-            statusDiv.innerText = "✨ Готово! (если картинка не появилась, обновите страницу)";
-        } catch (error) {
-            statusDiv.innerText = `❌ Ошибка: ${error.message}`;
-        } finally {
+            statusDiv.innerText = "✨ Изображение успешно сгенерировано!";
             btn.disabled = false;
-        }
+        };
+
+        // Если сервер выдаст сбой
+        resultImg.onerror = function() {
+            statusDiv.innerText = "❌ Ошибка загрузки. Попробуйте еще раз через пару секунд.";
+            btn.disabled = false;
+        };
     }
 </script>
 
