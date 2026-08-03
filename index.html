@@ -13,6 +13,7 @@
         button:disabled { background-color: #555; }
         #status { color: #ffa502; margin: 15px 0; }
         img { max-width: 100%; border-radius: 5px; display: none; margin-top: 20px; }
+        .note { font-size: 12px; color: #aaa; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -26,6 +27,7 @@
     
     <div id="status"></div>
     <img id="resultImage" alt="Результат нейросети">
+    <p class="note">Модель: realistic | размер 1024x1024 | безопасный режим отключён</p>
 </div>
 
 <script>
@@ -35,30 +37,32 @@
         const resultImg = document.getElementById('resultImage');
         const btn = document.getElementById('processBtn');
 
+        // Проверка на пустой ввод
+        if (!promptInput.value.trim()) {
+            statusDiv.innerText = "⚠️ Введите описание!";
+            return;
+        }
+
         btn.disabled = true;
         statusDiv.innerText = "⏳ Нейросеть генерирует кадр... Пожалуйста, подождите.";
         resultImg.style.display = 'none';
 
-        // 1. Кодируем текст промпта, чтобы в нём не ломались пробелы и запятые
-        const encodedPrompt = encodeURIComponent(promptInput.value);
-        
-        // Добавляем отрицательные параметры прямо в конец ссылки для обхода одежды
-        const negativeParams = encodeURIComponent(", clothes, underwear, bra, panties, fabric, blurry, bad anatomy");
+        // Добавляем негативные термины прямо в промпт (чтобы избежать одежды)
+        const fullPrompt = promptInput.value + ", no clothes, no underwear, no bra, no panties, no fabric, no blur, no bad anatomy, no deformed";
+        const encodedPrompt = encodeURIComponent(fullPrompt);
 
-        // 2. Строим прямую ссылку на ИИ-генератор. Параметр safe=false отключает NSFW цензуру.
-        const imageUrl = `https://pollinations.ai{encodedPrompt}${negativeParams}?safe=false&width=512&height=512&nologo=true`;
+        // Правильный URL для Pollinations.ai
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=realistic&nologo=true&safe=false`;
 
-        // 3. Скачиваем картинку через стандартный механизм браузера (img.src) — тут CORS не существует!
+        // Загружаем картинку через img.src (CORS не мешает)
         resultImg.src = imageUrl;
 
-        // Когда картинка полностью загрузится с сервера Pollinations — показываем её
         resultImg.onload = function() {
             resultImg.style.display = 'block';
             statusDiv.innerText = "✨ Изображение успешно сгенерировано!";
             btn.disabled = false;
         };
 
-        // Если сервер выдаст сбой
         resultImg.onerror = function() {
             statusDiv.innerText = "❌ Ошибка загрузки. Попробуйте еще раз через пару секунд.";
             btn.disabled = false;
