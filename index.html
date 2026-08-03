@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИИ Генератор</title>
+    <title>ИИ Генератор Без Цензуры</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 10px; }
@@ -27,80 +27,37 @@
     
     <div id="status"></div>
     <img id="resultImage" alt="Результат нейросети">
-    <p class="note">Используется модель SDXL. Генерация может занять до 30 секунд.</p>
+    <p class="note">Используется бесплатный API Pollinations.ai (без цензуры).</p>
 </div>
 
 <script>
-    // ВСТАВЬТЕ СЮДА ВАШ ТОКЕН С HUGGING FACE (hf_...)
-    const HF_TOKEN = "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"; 
-
-    // Модель для генерации (поддерживает NSFW при соответствующем промпте)
-    const MODEL_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0";
-
     async function generateArt() {
         const promptInput = document.getElementById('promptInput');
         const statusDiv = document.getElementById('status');
         const resultImg = document.getElementById('resultImage');
         const btn = document.getElementById('processBtn');
 
-        // Базовая валидация
         if (!promptInput.value.trim()) {
             statusDiv.innerText = "⚠️ Введите описание!";
             return;
         }
 
         btn.disabled = true;
-        statusDiv.innerText = "⏳ Нейросеть генерирует кадр... Это занимает около 15-30 секунд.";
+        statusDiv.innerText = "⏳ Генерация... (до 15 секунд)";
         resultImg.style.display = 'none';
 
         try {
-            const response = await fetch(
-                MODEL_URL,
-                {
-                    headers: { 
-                        "Authorization": `Bearer ${HF_TOKEN}`,
-                        "Content-Type": "application/json",
-                        "Accept": "image/png" // явно просим картинку
-                    },
-                    method: "POST",
-                    body: JSON.stringify({
-                        inputs: promptInput.value,
-                        parameters: {
-                            negative_prompt: "clothes, underwear, bra, panties, fabric, blurry, bad anatomy, deformed, low quality",
-                            guidance_scale: 7.0,
-                            num_inference_steps: 30  // увеличил для качества
-                        }
-                    }),
-                }
-            );
+            // Используем Pollinations.ai (поддерживает CORS)
+            const encodedPrompt = encodeURIComponent(promptInput.value);
+            // Модель: "realistic" — даёт фотореализм, можно заменить на "flux" или "dreamshaper"
+            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=realistic&nologo=true`;
 
-            if (!response.ok) {
-                let errorMsg = `Ошибка сервера: ${response.status}`;
-                if (response.status === 503) {
-                    errorMsg = "Модель загружается на сервер Hugging Face. Подождите 1 минуту и попробуйте снова.";
-                } else if (response.status === 401 || response.status === 403) {
-                    errorMsg = "Неверный токен или нет доступа. Проверьте HF_TOKEN.";
-                } else {
-                    // Попробуем прочитать текстовый ответ (может быть JSON с деталями)
-                    try {
-                        const errorText = await response.text();
-                        if (errorText) errorMsg += `: ${errorText}`;
-                    } catch (_) {}
-                }
-                throw new Error(errorMsg);
-            }
-
-            // Получаем blob-картинку
-            const blob = await response.blob();
-            const outputUrl = URL.createObjectURL(blob);
-            
-            resultImg.src = outputUrl;
+            // Просто устанавливаем src — изображение генерируется на лету
+            resultImg.src = url;
             resultImg.style.display = 'block';
-            statusDiv.innerText = "✨ Изображение успешно сгенерировано!";
-
+            statusDiv.innerText = "✨ Готово! (если картинка не появилась, обновите страницу)";
         } catch (error) {
             statusDiv.innerText = `❌ Ошибка: ${error.message}`;
-            console.error(error);
         } finally {
             btn.disabled = false;
         }
