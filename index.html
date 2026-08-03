@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИИ Бесплатный Редактор</title>
+    <title>ИИ Генератор</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 10px; }
-        input, button { display: block; width: 100%; margin: 20px 0; padding: 12px; border-radius: 5px; border: none; }
-        button { background-color: #00bcd4; color: white; font-size: 16px; cursor: pointer; }
+        input, button { display: block; width: 100%; margin: 20px 0; padding: 12px; border-radius: 5px; border: none; box-sizing: border-box; }
+        input { background: #333; color: #fff; font-size: 16px; }
+        button { background-color: #e91e63; color: white; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #555; }
         #status { color: #ffa502; margin: 15px 0; }
         img { max-width: 100%; border-radius: 5px; display: none; margin-top: 20px; }
     </style>
@@ -16,36 +18,32 @@
 <body>
 
 <div class="container">
-    <h2>ИИ Без Цензуры (Бесплатно)</h2>
-    <input type="file" id="imageInput" accept="image/*">
-    <button id="processBtn" onclick="processImage()">Запустить обработку</button>
+    <h2>ИИ Генератор Без Цензуры</h2>
+    <p>Введите описание персонажа на английском</p>
+    
+    <input type="text" id="promptInput" value="1girl, naked body, flawless realistic skin, highly detailed, photorealistic">
+    <button id="processBtn" onclick="generateArt()">Создать изображение</button>
+    
     <div id="status"></div>
-    <img id="resultImage" alt="Результат">
+    <img id="resultImage" alt="Результат нейросети">
 </div>
 
 <script>
-    // ВСТАВЬТЕ СЮДА ВАШ ТОКЕН С HUGGING FACE
+    // ВСТАВЬТЕ СЮДА ВАШ ТОКЕН С HUGGING FACE (hf_...)
     const HF_TOKEN = "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"; 
 
-    async function processImage() {
-        const fileInput = document.getElementById('imageInput');
+    async function generateArt() {
+        const promptInput = document.getElementById('promptInput');
         const statusDiv = document.getElementById('status');
         const resultImg = document.getElementById('resultImage');
         const btn = document.getElementById('processBtn');
 
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert('Выберите файл фотографии!');
-            return;
-        }
-
         btn.disabled = true;
-        statusDiv.innerText = "⏳ Отправка на бесплатный сервер Hugging Face... Это займет 10-30 секунд.";
+        statusDiv.innerText = "⏳ Нейросеть генерирует кадр... Это занимает около 15-30 секунд.";
         resultImg.style.display = 'none';
 
         try {
-            const file = fileInput.files[0];
-
-            // Отправляем запрос на нецензурированную модель SDXL-Inpaint, развернутую на Hugging Face
+            // Запрос к быстрой нецензурированной аниме/реалистичной модели Animagine XL
             const response = await fetch(
                 "https://huggingface.co",
                 {
@@ -55,23 +53,29 @@
                     },
                     method: "POST",
                     body: JSON.stringify({
-                        inputs: "naked body, highly detailed, realistic skin texture, photorealistic",
+                        inputs: promptInput.value,
                         parameters: {
-                            negative_prompt: "clothes, underwear, bra, panties, fabric, blurry, bad anatomy",
-                            denoising_strength: 0.85
+                            negative_prompt: "clothes, underwear, bra, panties, fabric, blurry, bad anatomy, deformed",
+                            guidance_scale: 7.0,
+                            num_inference_steps: 28
                         }
                     }),
                 }
             );
 
-            if (!response.ok) throw new Error("Сервер перегружен или токен неверен. Попробуйте еще раз.");
+            if (!response.ok) {
+                if (response.status === 503) {
+                    throw new Error("Модель загружается на сервер Hugging Face. Подождите 1 минуту и нажмите кнопку снова.");
+                }
+                throw new Error(`Ошибка сервера: ${response.status}`);
+            }
 
             const blob = await response.blob();
             const outputUrl = URL.createObjectURL(blob);
             
             resultImg.src = outputUrl;
             resultImg.style.display = 'block';
-            statusDiv.innerText = "✨ Готово!";
+            statusDiv.innerText = "✨ Изображение успешно сгенерировано!";
 
         } catch (error) {
             statusDiv.innerText = `❌ Ошибка: ${error.message}`;
